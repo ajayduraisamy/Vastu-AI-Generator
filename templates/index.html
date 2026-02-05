@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vastu Plan Generator</title>
+</head>
+<body>
+
+<h2>Vastu 2D Floor Plan Generator</h2>
+
+<form method="POST">
+
+Width (feet):<br>
+<input name="width" required><br><br>
+
+Height (feet):<br>
+<input name="height" required><br><br>
+
+Entrance:<br>
+<select name="entrance">
+    <option>North</option>
+    <option>South</option>
+    <option>East</option>
+    <option>West</option>
+</select><br><br>
+
+<button>Generate Plan</button>
+
+</form>
+
+{% if result %}
+
+<hr>
+
+<h3>Result</h3>
+
+<img src="/view/{{result}}" width="600">
+
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vastu AI Architect</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 450px; }
+        h2 { color: #1a1a1a; }
+        .input-group { margin-bottom: 15px; }
+        input[type="number"], input[type="file"], select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        .result-container { margin-top: 40px; background: white; padding: 20px; border-radius: 15px; text-align: center; }
+        img { max-width: 100%; border: 3px solid #1a1a1a; border-radius: 10px; }
+        .label { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+    <h2>Welcome, {{ name }}</h2>
+    <div class="card">
+        <h3>Vastu AI Generator</h3>
+        <form action="/generate-plan" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                <span class="label">Plot Dimensions (ft)</span>
+                <input type="number" name="width" placeholder="Width" required>
+                <input type="number" name="height" placeholder="Height" style="margin-top: 5px;" required>
+            </div>
+            <div class="input-group">
+                <span class="label">Upload House Photo/Sketch (Optional)</span>
+                <input type="file" name="home_photo" accept="image/*">
+            </div>
+            <div class="input-group">
+                <span class="label">Main Entrance Direction</span>
+                <select name="entrance">
+                    <option value="North">North</option>
+                    <option value="East">East</option>
+                    <option value="South">South</option>
+                    <option value="West">West</option>
+                </select>
+            </div>
+            <button type="submit">GENERATE PREMIUM PLAN</button>
+        </form>
+    </div>
+
+    {% if result_img %}
+    <div class="result-container">
+        <h3>Your High-Quality Vastu Plan</h3>
+        <img src="/output/{{ result_img }}" alt="Generated Plan">
+        <br><br>
+        <a href="/output/{{ result_img }}" download style="text-decoration: none; color: #007bff; font-weight: bold;">Download HD Blueprint</a>
+    </div>
+    {% endif %}
+</body>
+</html>
