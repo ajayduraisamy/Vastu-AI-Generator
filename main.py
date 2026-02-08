@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 
+
 app = Flask(__name__)
 CORS(app)
 
@@ -20,19 +21,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-# Force CPU to avoid CUDA errors if your drivers aren't set up
-
 DEVICE = "cpu" 
 
 # --- DATABASE SETUP ---
 def init_db():
     db = sqlite3.connect(DB_NAME)
-    
-        # Full table with name, email, number, password, address
+    # Full table with name, email, number, password, address
     db.execute("""CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT, email TEXT UNIQUE, number TEXT, password TEXT, address TEXT)""")
-        # Plans table with user_id, width, height, image_path, created_at
     db.execute("""CREATE TABLE IF NOT EXISTS plans(
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, 
         width TEXT, height TEXT, image_path TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
@@ -40,28 +37,25 @@ def init_db():
     db.close()
 
 init_db()
-
 # --- SDXL-TURBO MODELS ---
 print(f"Loading SDXL-Turbo on {DEVICE}...")
 model_id = "stabilityai/sdxl-turbo"
 t_type = torch.float16 if DEVICE == "cuda" else torch.float32
 
-
 # Load Text-to-Image and Image-to-Image for home photo processing
 txt2img = AutoPipelineForText2Image.from_pretrained(model_id, torch_dtype=t_type, variant="fp16" if DEVICE == "cuda" else None).to(DEVICE)
 img2img = AutoPipelineForImage2Image.from_pretrained(model_id, torch_dtype=t_type, variant="fp16" if DEVICE == "cuda" else None).to(DEVICE)
 
-
-# ---  LABEL ENGINE ---#
+# --- PREMIUM LABEL ENGINE ---
 def add_premium_labels(img_path):
     img = Image.open(img_path).convert("RGB")
     draw = ImageDraw.Draw(img)
     try:
-        font = ImageFont.truetype("arialbd.ttf", 22) 
+        font = ImageFont.truetype("arialbd.ttf", 22) # Ensure this font exists in your dir
     except:
         font = ImageFont.load_default()
 
-    
+    # Vastu Positions
     coords = {
         "POOJA (NE)": (370, 50),
         "KITCHEN (SE)": (370, 410),
@@ -76,11 +70,8 @@ def add_premium_labels(img_path):
         draw.text(pos, label, fill="black", font=font)
     img.save(img_path)
 
-
 # --- API FOR FLUTTER ---
 
-
-#--- Regiter API ---
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -98,8 +89,6 @@ def register():
     except: return jsonify({"status": "error"}), 400
     finally: db.close()
 
-
-#--- Login API ---
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
@@ -111,7 +100,6 @@ def login():
         return jsonify({"status": "success", "user": dict(user)})
     return jsonify({"status": "error"}), 401
 
-#--- Profile API ---
 @app.route("/profile/<int:user_id>", methods=["GET"])
 def profile(user_id):
     db = sqlite3.connect(DB_NAME)
@@ -122,14 +110,12 @@ def profile(user_id):
         return jsonify({"status": "success", "user": dict(user)})
     return jsonify({"status": "error"}), 404
 
-
-# Image generation Api
 @app.route("/generate", methods=["POST"])
 def generate():
     user_id = request.form.get("user_id")
     w, h = request.form.get("width", "30"), request.form.get("height", "40")
     
-    
+    # Smarter prompt to tell AI to fix the UPLOADED layout
     prompt = (f"Masterpiece architectural CAD revision, transform this sketch into a "
               f"professional 2D blueprint, {w}x{h} plot, top-down view, sharp black lines, "
               f"clean white background, high contrast technical drawing, maintain original wall structure")
@@ -144,13 +130,13 @@ def generate():
         
         init_image = Image.open(up_path).convert("RGB").resize((512, 512))
         
-        
+        # LOWER STRENGTH (0.35) keeps YOUR walls but fixes the DRAWING quality
         image = img2img(
             prompt=prompt, 
             image=init_image, 
             strength=0.35, 
             num_inference_steps=5, 
-            guidance_scale=8.5 
+            guidance_scale=8.5 # Higher guidance for sharper lines
         ).images[0]
     else:
         image = txt2img(prompt=prompt, num_inference_steps=4, guidance_scale=0.0).images[0]
@@ -168,8 +154,6 @@ def generate():
     
     return jsonify({"image_url": f"/output/{filename}"}), 200
 
-
-#--- History API ---
 @app.route("/history/<int:user_id>", methods=["GET"])
 def history(user_id):
     db = sqlite3.connect(DB_NAME)
@@ -178,12 +162,10 @@ def history(user_id):
     db.close()
     return jsonify([dict(r) for r in rows])
 
-# --- Serve generated images ---
 @app.route("/output/<filename>")
 def serve_image(filename):
     return send_file(os.path.join(OUTPUT_DIR, filename))
 
-
 if __name__ == "__main__":
-    print("Starting Flask server on http://0.0.0.0:8080")
+    # use_reloader=False is mandatory to prevent MemoryError during model load
     app.run(host='0.0.0.0', port=8080, debug=True, use_reloader=False)

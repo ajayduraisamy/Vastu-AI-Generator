@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Floor Plan Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <h1 class="text-3xl font-bold text-center text-indigo-600">AI Floor Plan Backend Tester</h1>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">1. Register User</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <input id="reg_name" type="text" placeholder="Name" class="border p-2 rounded">
+                <input id="reg_email" type="email" placeholder="Email" class="border p-2 rounded">
+                <input id="reg_num" type="text" placeholder="Number" class="border p-2 rounded">
+                <input id="reg_pass" type="password" placeholder="Password" class="border p-2 rounded">
+                <input id="reg_addr" type="text" placeholder="Address" class="border p-2 rounded" col-span-2>
+            </div>
+            <button onclick="register()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Register</button>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">2. Login</h2>
+            <div class="flex gap-4">
+                <input id="login_email" type="email" placeholder="Email" class="border p-2 rounded flex-1">
+                <input id="login_pass" type="password" placeholder="Password" class="border p-2 rounded flex-1">
+                <button onclick="login()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Login</button>
+            </div>
+            <p id="auth_status" class="mt-2 text-sm font-medium"></p>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">3. Generate Floor Plan</h2>
+            <div class="space-y-4">
+                <div class="flex gap-4">
+                    <input id="gen_w" type="text" placeholder="Width (e.g. 30)" class="border p-2 rounded flex-1">
+                    <input id="gen_h" type="text" placeholder="Height (e.g. 40)" class="border p-2 rounded flex-1">
+                </div>
+                <div class="input-group">
+                <span class="label">Main Entrance Direction</span>
+                <select name="entrance">
+                    <option value="North">North</option>
+                    <option value="East">East</option>
+                    <option value="South">South</option>
+                    <option value="West">West</option>
+                </select>
+            </div>
+                <input id="gen_img" type="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+                <button onclick="generate()" id="gen_btn" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-gray-400">Generate Plan (Takes ~1-2 mins)</button>
+            </div>
+            <div id="result_area" class="mt-6 hidden">
+                <h3 class="font-bold mb-2">Result:</h3>
+                <img id="output_img" src="" alt="Generated Plan" class="border rounded-lg max-w-full">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://127.0.0.1:8080';
+        let currentUserId = null;
+
+        async function register() {
+            const data = {
+                name: document.getElementById('reg_name').value,
+                email: document.getElementById('reg_email').value,
+                number: document.getElementById('reg_num').value,
+                password: document.getElementById('reg_pass').value,
+                address: document.getElementById('reg_addr').value
+            };
+            const res = await fetch(`${BASE_URL}/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            alert(result.status === 'success' ? 'Registered!' : 'Error: ' + result.message);
+        }
+
+        async function login() {
+            const data = {
+                email: document.getElementById('login_email').value,
+                password: document.getElementById('login_pass').value
+            };
+            const res = await fetch(`${BASE_URL}/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if(result.status === 'success') {
+                currentUserId = result.user.id;
+                document.getElementById('auth_status').innerText = `Logged in as: ${result.user.name} (ID: ${currentUserId})`;
+                document.getElementById('auth_status').className = "mt-2 text-sm font-medium text-green-600";
+            } else {
+                alert('Login Failed');
+            }
+        }
+
+        async function generate() {
+            if(!currentUserId) return alert("Please login first!");
+            
+            const btn = document.getElementById('gen_btn');
+            btn.disabled = true;
+            btn.innerText = "Processing on CPU... Please wait...";
+
+            const formData = new FormData();
+            formData.append('user_id', currentUserId);
+            formData.append('width', document.getElementById('gen_w').value);
+            formData.append('height', document.getElementById('gen_h').value);
+            
+            const fileInput = document.getElementById('gen_img');
+            if(fileInput.files[0]) formData.append('image', fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${BASE_URL}/generate`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                document.getElementById('output_img').src = BASE_URL + result.image_url;
+                document.getElementById('result_area').classList.remove('hidden');
+            } catch (e) {
+                alert("Generation failed. Check console.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Generate Plan (Takes ~1-2 mins)";
+            }
+        }
+    </script>
+</body>
+</html>
